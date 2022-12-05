@@ -9,6 +9,7 @@ import type {PeerDiscovery} from "@libp2p/interface-peer-discovery";
 import type {Components} from "libp2p/components";
 import {prometheusMetrics} from "@libp2p/prometheus-metrics";
 import {Registry} from "prom-client";
+import {yamux} from "@chainsafe/libp2p-yamux";
 import {createNoise} from "./noise.js";
 
 export interface ILibp2pOptions {
@@ -40,6 +41,7 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
       peerDiscovery.push(mdns());
     }
   }
+
   return await createLibp2p({
     peerId: options.peerId,
     addresses: {
@@ -48,7 +50,11 @@ export async function createNodejsLibp2p(options: ILibp2pOptions): Promise<Libp2
     },
     connectionEncryption: [createNoise()],
     transports: [tcp()],
-    streamMuxers: [mplex({maxInboundStreams: 256})],
+    streamMuxers: [
+      // Cast because yamux.StreamMuxerFactory is different than libp2p.StreamMuxerFactory
+      yamux(),
+      mplex({maxInboundStreams: 256}),
+    ],
     peerDiscovery,
     metrics: options.metrics
       ? prometheusMetrics({
